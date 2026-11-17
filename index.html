@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CambiaZO — Traspasos, Cambios y Créditos</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- jsPDF & jsPDF-AutoTable para Reportes Semanales -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="tailwind.config.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="antialiased pb-16">
+
+    <!-- Esferas Glass/Bubble decorativas de fondo -->
+    <div class="bubble-bg bubble-1"></div>
+    <div class="bubble-bg bubble-2"></div>
+    <div class="bubble-bg bubble-3"></div>
+
+    <!-- Contenedor de Notificaciones Toast -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Modal Reutilizable (Para Abonos en Crédito y Confirmaciones) -->
+    <div id="custom-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div class="glass-card w-full max-w-md p-6 transform transition-all scale-100">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="modal-title" class="font-display text-lg font-bold text-slate-800">Título</h3>
+                <button onclick="closeModal()" class="w-9 h-9 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="modal-body" class="space-y-4 text-sm text-slate-600"></div>
+        </div>
+    </div>
+
+    <!-- Header Principal -->
+    <header class="sticky top-0 z-30 backdrop-blur-md bg-white/75 border-b border-rose-100/80">
+        <div class="h-1 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 text-white flex items-center justify-center shadow-lg shadow-brand-600/30 text-xl">
+                    <i class="fa-solid fa-shoe-prints -rotate-12"></i>
+                </div>
+                <div>
+                    <h1 class="font-display text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
+                        Cambia<span class="text-brand-600">ZO</span>
+                    </h1>
+                    <p class="text-xs font-medium text-slate-500">Traspasos, cambios de talla y créditos de calzado (Bs.)</p>
+                </div>
+            </div>
+
+            <!-- Selector de Pestañas Estilo Pill / Bubble -->
+            <nav class="flex p-1.5 bg-rose-100/70 backdrop-blur-md rounded-2xl border border-rose-200/60 w-full sm:w-auto">
+                <button id="tab-btn-traspasos" onclick="switchTab('traspasos')" class="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-display font-bold text-sm transition-all flex items-center justify-center gap-2 bg-brand-600 text-white shadow-md shadow-brand-600/25">
+                    <i class="fa-solid fa-right-left"></i>
+                    <span>Traspasos y Cambios</span>
+                </button>
+                <button id="tab-btn-creditos" onclick="switchTab('creditos')" class="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-display font-bold text-sm transition-all flex items-center justify-center gap-2 text-slate-600 hover:text-brand-700">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                    <span>Zapatos a Crédito</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-5">
+
+        <!-- PANEL DE MÉTRICAS RÁPIDAS SUPERIOR -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Métrica 1 -->
+            <div class="glass-card p-4 sm:p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 text-brand-600 flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-fire-flame-curved"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Urgentes Hoy</p>
+                    <p id="stat-urgentes" class="font-display text-2xl font-extrabold text-slate-800">0</p>
+                </div>
+            </div>
+
+            <!-- Métrica 2 -->
+            <div class="glass-card p-4 sm:p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-file-circle-exclamation"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Deben Doc. / Sist.</p>
+                    <p id="stat-pendientes-sys" class="font-display text-2xl font-extrabold text-slate-800">0</p>
+                </div>
+            </div>
+
+            <!-- Métrica 3 -->
+            <div class="glass-card p-4 sm:p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Saldo por Cobrar</p>
+                    <p id="stat-saldo-bs" class="font-display text-xl sm:text-2xl font-extrabold text-brand-600">0 Bs.</p>
+                </div>
+            </div>
+
+            <!-- Métrica 4 -->
+            <div class="glass-card p-4 sm:p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Sin Liquidar</p>
+                    <p id="stat-sin-liquidar" class="font-display text-2xl font-extrabold text-slate-800">0</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESPALDO: EXPORTAR / IMPORTAR TODOS LOS DATOS -->
+        <section class="glass-card p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+                <div>
+                    <p class="font-display font-bold text-slate-800">Respaldo de datos</p>
+                    <p id="respaldo-info" class="text-xs text-slate-500">Cargando…</p>
+                    <p id="respaldo-ultimo" class="text-[11px] text-slate-400"></p>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <button onclick="exportarRespaldo()" class="btn-brand px-4 py-2.5 text-xs font-bold flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Guardar y exportar</span>
+                </button>
+                <button onclick="abrirSelectorImportacion()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-rose-50 hover:text-brand-600 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-import"></i>
+                    <span>Importar respaldo</span>
+                </button>
+                <input type="file" id="input-importar-respaldo" accept="application/json,.json" class="hidden" onchange="procesarArchivoRespaldo(event)">
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- PESTAÑA 1: TRASPASOS Y CAMBIOS DE ZAPATOS                             -->
+        <!-- ===================================================================== -->
+        <div id="view-traspasos" class="space-y-6">
+            
+            <!-- Formulario de Nuevo Traspaso / Cambio -->
+            <section class="glass-card p-5 sm:p-7">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 mb-5 border-b border-rose-100">
+                    <div class="flex items-center gap-3">
+                        <span class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center text-sm shadow-md shadow-brand-600/20">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                        <div>
+                            <h2 class="font-display text-lg font-bold text-slate-800">Registrar Traspaso o Cambio</h2>
+                            <p class="text-xs text-slate-500">Completa los datos del calzado, origen y control de documentos</p>
+                        </div>
+                    </div>
+                    <span id="fecha-actual-badge" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-rose-50 text-brand-700 border border-rose-200/70 self-start sm:self-auto"></span>
+                </div>
+
+                <form id="form-traspaso" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Código del Zapato -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-barcode text-brand-500 mr-1"></i> Código del Zapato *
+                            </label>
+                            <input type="text" id="t-codigo" required placeholder="Ej. NK-4029-RJ" class="glass-input w-full px-3.5 py-2.5 text-sm font-semibold uppercase">
+                        </div>
+
+                        <!-- Tipo: Traspaso o Cambio -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-shuffle text-brand-500 mr-1"></i> Tipo de Movimiento *
+                            </label>
+                            <select id="t-tipo" required onchange="handleTipoChange()" class="glass-input w-full px-3.5 py-2.5 text-sm font-semibold text-slate-700">
+                                <option value="Traspaso">Traspaso entre tiendas</option>
+                                <option value="Cambio">Cambio de talla</option>
+                            </select>
+                        </div>
+
+                        <!-- Tienda Origen (texto libre, editable después) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-store text-brand-500 mr-1"></i> Tienda donde está *
+                            </label>
+                            <input type="text" id="t-tienda" required placeholder="Ej. Sucursal Central / Norte" class="glass-input w-full px-3.5 py-2.5 text-sm">
+                            <p class="text-[11px] text-slate-400 mt-1">Escríbela libremente; podrás editarla después.</p>
+                        </div>
+
+                        <!-- Horario -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-regular fa-clock text-brand-500 mr-1"></i> Horario *
+                            </label>
+                            <select id="t-horario" required class="glass-input w-full px-3.5 py-2.5 text-sm font-semibold">
+                                <option value="Urgente">🔴 Urgente</option>
+                                <option value="Mañana">🌅 Mañana</option>
+                                <option value="Tarde">🌇 Tarde</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tallas: una sola en traspaso, solicitada + nueva en cambio -->
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-1 min-w-[150px]">
+                            <label id="label-talla" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-ruler text-brand-500 mr-1"></i> Talla *
+                            </label>
+                            <input type="text" id="t-talla" required placeholder="Ej. 38" class="glass-input w-full px-3.5 py-2.5 text-sm font-bold">
+                        </div>
+                        <div id="wrap-talla-nueva" class="flex-1 min-w-[150px] hidden">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-right-left text-brand-500 mr-1"></i> Nueva talla *
+                            </label>
+                            <input type="text" id="t-talla-nueva" placeholder="Ej. 40" class="glass-input w-full px-3.5 py-2.5 text-sm font-bold">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Para quién es -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-user-tag text-brand-500 mr-1"></i> ¿Para quién es? (Cliente / Destino) *
+                            </label>
+                            <input type="text" id="t-para-quien" required placeholder="Nombre del cliente o tienda destino" class="glass-input w-full px-3.5 py-2.5 text-sm">
+                        </div>
+
+                        <!-- Quién está haciendo el cambio -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-id-badge text-brand-500 mr-1"></i> Quién realiza el movimiento *
+                            </label>
+                            <input type="text" id="t-responsable" required placeholder="Nombre del vendedor o encargado" class="glass-input w-full px-3.5 py-2.5 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Opciones de Tikeo (Documento y Sistema Principal) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <!-- Tikeo 1: Documento -->
+                        <div class="glass-panel-sub p-4 flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-rose-100 text-brand-600 flex items-center justify-center text-lg shrink-0">
+                                    <i class="fa-solid fa-file-invoice"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800">¿Se recogió con documento?</p>
+                                    <p id="label-doc-estado" class="text-xs font-semibold text-amber-600">Estado: Deben documento</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                <input type="checkbox" id="t-con-documento" class="sr-only peer" onchange="updateFormDocLabel()">
+                                <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+
+                        <!-- Tikeo 2: Subido al Sistema Principal -->
+                        <div class="glass-panel-sub p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-rose-100 text-brand-600 flex items-center justify-center text-lg shrink-0">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800">¿Subido al sistema principal?</p>
+                                    <p id="label-sys-estado" class="text-xs font-semibold text-slate-500">Aún no registrado en sistema</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 self-end sm:self-center">
+                                <input type="date" id="t-fecha-sistema" class="glass-input px-2.5 py-1.5 text-xs font-semibold hidden">
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="checkbox" id="t-subido-sistema" class="sr-only peer" onchange="toggleFormSystemDate()">
+                                    <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="btn-brand px-7 py-3 font-display font-bold text-sm flex items-center gap-2 w-full sm:w-auto justify-center">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Guardar Traspaso / Cambio</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Barra de Reportes Semanales en PDF + Filtros -->
+            <section class="glass-card p-5 space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-rose-100">
+                    <div>
+                        <h3 class="font-display text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf text-brand-600 text-lg"></i>
+                            Historial y Reporte Semanal en PDF
+                        </h3>
+                        <p class="text-xs text-slate-500">Selecciona una semana para filtrar o descargar el reporte detallado en PDF</p>
+                    </div>
+
+                    <!-- Selector de Semana y Botón PDF -->
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <div class="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-xl border border-rose-200/80">
+                            <label for="filtro-semana" class="text-xs font-bold text-slate-600">Semana:</label>
+                            <input type="week" id="filtro-semana" onchange="renderTraspasos()" class="text-xs font-bold text-brand-700 bg-transparent focus:outline-none">
+                        </div>
+                        <button onclick="limpiarFiltroSemana()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-brand-600 transition">
+                            Ver Todas
+                        </button>
+                        <button onclick="exportarTraspasosPDF()" class="btn-brand px-4 py-2 text-xs font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Descargar PDF Semanal</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Buscador y Filtros Rápidos -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="text" id="buscar-traspaso" oninput="renderTraspasos()" placeholder="Buscar por código, tienda, cliente o encargado..." class="glass-input w-full pl-10 pr-4 py-2 text-sm">
+                    </div>
+                    <select id="filtro-estado-traspaso" onchange="renderTraspasos()" class="glass-input px-3.5 py-2 text-sm font-semibold text-slate-700">
+                        <option value="todos">Todos los estados</option>
+                        <option value="urgentes">🔴 Solo Urgentes</option>
+                        <option value="sin-doc">📄 Deben Documento</option>
+                        <option value="sin-sys">☁️ Falta Subir a Sistema</option>
+                        <option value="completos">✅ Todo Completado</option>
+                    </select>
+                </div>
+
+                <!-- Listado de movimientos: una tarjeta por fila -->
+                <div id="lista-traspasos" class="space-y-2 pt-2">
+                    <!-- Renderizado dinámico por JS -->
+                </div>
+            </section>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- PESTAÑA 2: CONTROL DE ZAPATOS A CRÉDITO                               -->
+        <!-- ===================================================================== -->
+        <div id="view-creditos" class="hidden space-y-6">
+            
+            <!-- Formulario de Registro a Crédito -->
+            <section class="glass-card p-5 sm:p-7">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 mb-5 border-b border-rose-100">
+                    <div class="flex items-center gap-3">
+                        <span class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center text-sm shadow-md shadow-brand-600/20">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                        </span>
+                        <div>
+                            <h2 class="font-display text-lg font-bold text-slate-800">Registrar Zapato a Crédito / Salida</h2>
+                            <p class="text-xs text-slate-500">Control de entregas, abonos en Bolivianos (Bs.), devoluciones y liquidación</p>
+                        </div>
+                    </div>
+                    <button onclick="exportarCreditosPDF()" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 text-brand-700 border border-rose-200 hover:bg-brand-600 hover:text-white transition flex items-center gap-2 self-start sm:self-auto">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Reporte Créditos PDF</span>
+                    </button>
+                </div>
+
+                <form id="form-credito" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Código del Zapato -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-barcode text-brand-500 mr-1"></i> Código del Zapato *
+                            </label>
+                            <input type="text" id="c-codigo" required placeholder="Ej. AD-9910-NG" class="glass-input w-full px-3.5 py-2.5 text-sm font-semibold uppercase">
+                        </div>
+
+                        <!-- Talla -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-ruler text-brand-500 mr-1"></i> Talla *
+                            </label>
+                            <input type="text" id="c-talla" required placeholder="Ej. 40" class="glass-input w-full px-3.5 py-2.5 text-sm font-bold">
+                        </div>
+
+                        <!-- Quién llevó -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-solid fa-user text-brand-500 mr-1"></i> Quién llevó *
+                            </label>
+                            <input type="text" id="c-cliente" required placeholder="Nombre completo" class="glass-input w-full px-3.5 py-2.5 text-sm">
+                        </div>
+
+                        <!-- Fecha -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <i class="fa-regular fa-calendar text-brand-500 mr-1"></i> Fecha *
+                            </label>
+                            <input type="date" id="c-fecha" required class="glass-input w-full px-3.5 py-2.5 text-sm font-semibold">
+                        </div>
+                    </div>
+
+                    <!-- Estado Inicial y Montos en Bs. -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 glass-panel-sub p-4">
+                        <!-- Opción de estado -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                Acción / Estado Inicial *
+                            </label>
+                            <select id="c-estado" onchange="handleCreditoEstadoChange()" class="glass-input w-full px-3.5 py-2.5 text-sm font-bold text-slate-700">
+                                <option value="Dejó a cuenta">💵 Dejó a cuenta (Abono en Bs.)</option>
+                                <option value="Pagado">✅ Pagado Total</option>
+                                <option value="Devolvió">↩️ Devolvió el zapato</option>
+                            </select>
+                        </div>
+
+                        <!-- Precio Total del Zapato -->
+                        <div id="wrap-precio-total">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                Precio Total Zapato (Bs.) *
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-slate-400">Bs.</span>
+                                <input type="number" step="0.5" min="0" id="c-precio-total" required placeholder="0.00" class="glass-input w-full pl-10 pr-3.5 py-2.5 text-sm font-bold">
+                            </div>
+                        </div>
+
+                        <!-- Monto que dejó en Bs. -->
+                        <div id="wrap-monto-dejado">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                Monto que dejó (Bs.) *
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-brand-500">Bs.</span>
+                                <input type="number" step="0.5" min="0" id="c-monto-dejado" placeholder="0.00" class="glass-input w-full pl-10 pr-3.5 py-2.5 text-sm font-bold text-brand-700">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn-brand px-7 py-3 font-display font-bold text-sm flex items-center gap-2 w-full sm:w-auto justify-center">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Registrar Crédito</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Buscador general de Créditos -->
+            <div class="glass-card p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="relative w-full sm:max-w-md">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="buscar-credito" oninput="renderCreditos()" placeholder="Buscar por cliente o código de zapato..." class="glass-input w-full pl-10 pr-4 py-2 text-sm">
+                </div>
+                <div class="flex items-center gap-4 text-xs font-semibold text-slate-600">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Pendientes</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Pagados / Finalizados</span>
+                </div>
+            </div>
+
+            <!-- SUB-SECCIÓN 1: CRÉDITOS ACTIVOS / PENDIENTES -->
+            <section class="glass-card p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-rose-100 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </span>
+                        <div>
+                            <h3 class="font-display text-base sm:text-lg font-bold text-slate-800">Créditos Activos / Pendientes</h3>
+                            <p class="text-xs text-slate-500">Zapatos con saldo pendiente por cobrar o esperando devolución</p>
+                        </div>
+                    </div>
+                    <span id="badge-count-activos" class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-700">0</span>
+                </div>
+
+                <div id="lista-creditos-activos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Renderizado dinámico -->
+                </div>
+            </section>
+
+            <!-- SUB-SECCIÓN 2: LISTA DE PAGADOS / FINALIZADOS (CON TICKEADOR DE LIQUIDACIÓN) -->
+            <section class="glass-card p-5 sm:p-6 space-y-4 border-2 border-emerald-200/60">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </span>
+                        <div>
+                            <h3 class="font-display text-base sm:text-lg font-bold text-slate-800">Lista de Pagados y Finalizados</h3>
+                            <p class="text-xs text-slate-500">Marca el tikeador cuando se haya realizado la liquidación en caja</p>
+                        </div>
+                    </div>
+                    <span id="badge-count-pagados" class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-700 self-start sm:self-auto">0</span>
+                </div>
+
+                <div id="lista-creditos-pagados" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Renderizado dinámico -->
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
